@@ -1,0 +1,32 @@
+name: smartdatajobs
+
+services:
+  smartdatajobs:
+    image: payara/server-full:6.2025.11-jdk17
+    container_name: smartdatajobs
+
+    ports:
+      - "${SMARTDATAJOBS_HTTP_PORT:-8080}:8080"
+      - "${SMARTDATAJOBS_ADMIN_PORT:-4848}:4848"
+
+    volumes:
+      # Payara scans /opt/payara/deployments on startup and deploys every
+      # application it finds there. The WAR has to exist before the container
+      # is started, so run `mvn clean package` first.
+      - type: bind
+        source: ./target/SmartDataJobs.war
+        target: /opt/payara/deployments/SmartDataJobs.war
+        read_only: true
+        bind:
+          create_host_path: false
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - asadmin --user=$$ADMIN_USER --passwordfile=$$PASSWORD_FILE list-applications 2>/dev/null | grep -q SmartDataJobs
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    restart: unless-stopped
