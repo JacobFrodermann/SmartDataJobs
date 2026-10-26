@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1
+
+# Artifact images produced by:
+#   docker build -t smartdatajobs-war:local .
+#   docker build -t smartuser-war:local ../SmartUser
+ARG SMARTDATAJOBS_IMAGE=smartdatajobs-war:local
+ARG SMARTUSER_IMAGE=smartuser-war:local
+
+FROM ${SMARTDATAJOBS_IMAGE} AS smartdatajobs-war
+FROM ${SMARTUSER_IMAGE} AS smartuser-war
+
+# Fetch the PostgreSQL JDBC driver for Payara.
+FROM maven:3.9-eclipse-temurin-17 AS postgres-jdbc
+RUN mvn -q -B org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy \
+        -Dartifact=org.postgresql:postgresql:42.7.4 \
+        -DoutputDirectory=/opt/jdbc
+
+FROM payara/server-full:6.2025.11-jdk17
+
+USER root
+
+# Make the PostgreSQL driver available to the Payara domain.
+COPY --from=postgres-jdbc /opt/jdbc/postgresql-42.7.4.jar \
+    /opt/payara/appserver/glassfish/domains/domain1/lib/
+
+# Configures jdbc/SmartUser before Payara auto-deployment runs.
+COPY docker/payara/init_0_configure_smartuser_db.sh \
+    /opt/payara/scripts/init_0_configure_smartuser_db.sh
+RUN chmod +x /opt/payara/scripts/init_0_configure_smartuser_db.sh
+
+# Both applications come from their artifact images.
+COPY --from=smartdatajobs-war /opt/wars/SmartDataJobs.war \
+    /opt/payara/deployments/SmartDataJobs.war
+COPY --from=smartuser-war /opt/wars/SmartUser.war \
+    /opt/payara/deployments/SmartUser.war
+
+USER payara
