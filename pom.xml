@@ -93,6 +93,27 @@
 
     <build>
         <finalName>SmartDataJobs</finalName>
+
+        <!--
+            The NetBeans/Ant layout is kept: the Java sources and the resource
+            files next to them live in src/java, the document root in web/.
+        -->
+        <sourceDirectory>src/java</sourceDirectory>
+
+        <!--
+            NetBeans copied the non-Java files from src/java into
+            WEB-INF/classes (hibernate.properties). Maven needs this declared
+            explicitly.
+        -->
+        <resources>
+            <resource>
+                <directory>src/java</directory>
+                <excludes>
+                    <exclude>**/*.java</exclude>
+                </excludes>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -104,6 +125,7 @@
                 <artifactId>maven-war-plugin</artifactId>
                 <version>3.4.0</version>
                 <configuration>
+                    <warSourceDirectory>web</warSourceDirectory>
                     <!-- The application uses Servlet 3+ annotations, no web.xml is required. -->
                     <failOnMissingWebXml>false</failOnMissingWebXml>
                 </configuration>
