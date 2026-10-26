@@ -4,7 +4,9 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /workspace
 COPY pom.xml ./
 COPY libs ./libs
-COPY src ./src
+# NetBeans layout: sources in src/java, document root in web.
+COPY src/java ./src/java
+COPY web ./web
 RUN mvn -B -ntp clean package
 
 # Small artifact image containing the deployable WAR. The master Payara image
