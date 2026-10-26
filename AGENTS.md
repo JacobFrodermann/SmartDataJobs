@@ -20,7 +20,7 @@ Five separate Git repositories are involved:
 | `SmartUser` | `../SmartUser` | User management REST application and database-backed user store |
 | `SmartData` | `../SmartData` | TreeQL database access REST API (tables, records, storages) |
 | `SWAC` | `../SWAC` | SmartWebApplicatinComponents, the static JavaScript UI library used by the web front ends |
-| `SmartDataDeployment` | `../SmartDataDeployment` | Docker Compose stack, master Payara image, JDBC/config/bootstrap, operator scripts |
+| `SmartDataDeployment` | `..` | Docker Compose stack, master Payara image, JDBC/config/bootstrap, operator scripts |
 
 They are **not** Maven modules of one reactor. They are built separately.
 Each application repository builds only its own WAR artifact image. The Docker
@@ -131,7 +131,7 @@ docker build -t smartdatajobs-war:local .
 This produces a minimal image containing only
 `/opt/wars/SmartDataJobs.war`. It does not run Payara. The master Payara image
 and the Compose deployment that consume this image live in
-`../SmartDataDeployment` (§5).
+`..` (§5).
 
 ### 3.2 SmartUser
 
@@ -364,14 +364,14 @@ setup initializes it with:
 CREATE SCHEMA IF NOT EXISTS smartuser AUTHORIZATION CURRENT_USER;
 ```
 
-File: `../SmartDataDeployment/docker/postgres/init-smartuser.sql`.
+File: `../docker/postgres/init-smartuser.sql`.
 
 PostgreSQL init scripts only run when the data volume is first initialized. If
 an old volume exists without the schema, reset it from the deployment
 repository:
 
 ```bash
-cd ../SmartDataDeployment
+cd ..
 docker compose down -v
 ```
 
@@ -460,7 +460,7 @@ Without it, even anonymous user creation fails with HTTP 500
 the anonymous user.
 
 The endpoint is one-shot; a second call violates unique constraints and
-returns HTTP 500. Use `../SmartDataDeployment/scripts/init-smartuser.sh`, which
+returns HTTP 500. Use `../scripts/init-smartuser.sh`, which
 only calls it when `smartuser.users` is empty.
 
 ---
@@ -468,16 +468,16 @@ only calls it when `smartuser.users` is empty.
 ## 5. Docker and deployment
 
 All deployment tooling lives in the separate repository
-`../SmartDataDeployment`:
+`..`:
 
 ```text
-../SmartDataDeployment/compose.yaml             # PostgreSQL + Payara service
-../SmartDataDeployment/Dockerfile.payara        # master Payara image
-../SmartDataDeployment/docker/payara/init_0_configure_databases.sh
-../SmartDataDeployment/docker/payara/*_config.properties
-../SmartDataDeployment/docker/postgres/init-smartuser.sql
-../SmartDataDeployment/scripts/up.sh
-../SmartDataDeployment/scripts/init-smartuser.sh
+../compose.yaml             # PostgreSQL + Payara service
+../Dockerfile.payara        # master Payara image
+../docker/payara/init_0_configure_databases.sh
+../docker/payara/*_config.properties
+../docker/postgres/init-smartuser.sql
+../scripts/up.sh
+../scripts/init-smartuser.sh
 ```
 
 This repository keeps exactly one Docker file — `Dockerfile`, the SmartDataJobs
@@ -505,7 +505,7 @@ Contracts this repository must keep for the deployment repository:
 Everything else about the deployment — services, ports, environment variables,
 the master image, JDBC resources, the database bootstrap, known pitfalls and
 the full verification checklist — is documented in
-`../SmartDataDeployment/AGENTS.md`. Change it there, not here.
+`../AGENTS.md`. Change it there, not here.
 
 ---
 
@@ -543,8 +543,8 @@ directory, named `<module-name>_config.properties`:
 /opt/payara/SmartData_config.properties
 ```
 
-All three are shipped by `../SmartDataDeployment/Dockerfile.payara` from
-`../SmartDataDeployment/docker/payara/*_config.properties`. They exist because
+All three are shipped by `../Dockerfile.payara` from
+`../docker/payara/*_config.properties`. They exist because
 without them every application logs a load error and several endpoints fail:
 
 - SmartUser builds no Usermanager without `passwordsalt` and
@@ -595,7 +595,7 @@ The Payara image ships with:
 ```
 
 Setting only the `ADMIN_PASSWORD` environment variable does not rewrite that
-file. The deployment in `../SmartDataDeployment` therefore uses the image
+file. The deployment in `..` therefore uses the image
 defaults (`admin` / `admin`).
 If the admin password is changed, update the password file or add a proper
 startup configuration; otherwise `asadmin` healthchecks and administration
@@ -612,13 +612,13 @@ After SmartDataJobs changes:
 
 ```bash
 docker build -t smartdatajobs-war:local .
-cd ../SmartDataDeployment
+cd ..
 docker compose up --build -d
 ```
 
 The rebuild matrix for SmartUser, SmartData and SWAC is in
-`../SmartDataDeployment/AGENTS.md` §10.2, together with
-`../SmartDataDeployment/scripts/up.sh`, which rebuilds all four artifact images
+`../AGENTS.md` §10.2, together with
+`../scripts/up.sh`, which rebuilds all four artifact images
 and the master image.
 
 ### 6.7 SWAC licensing
@@ -628,7 +628,7 @@ their own `LICENSE.md` marking them as proprietary ("not for redistribution or
 modification without permission"), for example `Booking`, `Communicator`,
 `Mediaplayer`, `Texteditor` and `Questions`. Building them into an image that
 is pushed to a registry counts as redistribution. The stack image
-(`../SmartDataDeployment/Dockerfile.payara`) contains the SWAC artifact image as
+(`../Dockerfile.payara`) contains the SWAC artifact image as
 is. If that becomes a problem, exclude those directories in
 `../SWAC/Dockerfile`; do not patch the files.
 
@@ -644,12 +644,12 @@ docker build -t smartdatajobs-war:local .
 ```
 
 Deployment, startup, database bootstrap, log inspection and stack resets are
-documented in `../SmartDataDeployment/AGENTS.md`. After a code change the
+documented in `../AGENTS.md`. After a code change the
 artifact image must be rebuilt before the stack is restarted:
 
 ```bash
 docker build -t smartdatajobs-war:local .
-cd ../SmartDataDeployment
+cd ..
 docker compose up --build -d
 ```
 
@@ -698,13 +698,13 @@ Application level:
 
 Stack level:
 
-- [ ] `docker compose up --build -d` in `../SmartDataDeployment` yields two
+- [ ] `docker compose up --build -d` in `..` yields two
       healthy services, and `asadmin list-applications` lists all four
       applications.
 - [ ] `asadmin list-jdbc-resources` lists `jdbc/SmartUser` and `jdbc/SmartData`.
 
 The complete checklist, including SmartUser, SmartData and SWAC behaviour, is
-`../SmartDataDeployment/AGENTS.md` §12.
+`../AGENTS.md` §12.
 
 ---
 
@@ -719,7 +719,7 @@ Dockerfile              # minimal SmartDataJobs WAR artifact image
 libs/maven-repo/
 ```
 
-SmartDataDeployment (`../SmartDataDeployment`):
+SmartDataDeployment (`..`):
 
 ```text
 compose.yaml
@@ -810,4 +810,4 @@ infrastructure, so the deployment concern was extracted into the separate
 `SmartDataDeployment` repository. Each application repository keeps exactly its
 own artifact `Dockerfile`; every cross-component fact (context roots, JNDI
 names, config file names, schema ownership, build order, startup order,
-healthcheck) lives in `../SmartDataDeployment/AGENTS.md`.
+healthcheck) lives in `../AGENTS.md`.
