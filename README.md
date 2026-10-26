@@ -39,10 +39,10 @@ SmartDataJobs runs together with SmartUser, SmartData and SWAC on Payara 6
 with PostgreSQL. Everything needed to run that stack — Docker Compose, the
 master Payara image, the JDBC resource configuration, the configuration
 properties, the database bootstrap and the operator scripts — lives in the
-separate repository **`SmartDataDeployment`** (`../SmartDataDeployment`).
+separate repository **`SmartDataDeployment`** (`..`).
 
 ```bash
-cd ../SmartDataDeployment
+cd ..
 ./scripts/up.sh             # build all artifact images and start the stack
 ./scripts/init-smartuser.sh # once, on a fresh database
 ```
@@ -51,7 +51,7 @@ After changing SmartDataJobs, rebuild its artifact image and restart the stack:
 
 ```bash
 docker build -t smartdatajobs-war:local .
-cd ../SmartDataDeployment
+cd ..
 docker compose up --build -d
 ```
 
@@ -64,7 +64,7 @@ Deployed URLs:
 - SWAC: <http://localhost:8080/SWAC/>
 - Payara admin console: <http://localhost:4848> (`admin` / `admin`)
 
-See `../SmartDataDeployment/AGENTS.md` for the architecture, the integration
+See `../AGENTS.md` for the architecture, the integration
 contracts between the applications and the verification checklist.
 
 ## Project layout
