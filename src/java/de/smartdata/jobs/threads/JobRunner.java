@@ -519,6 +519,14 @@ public class JobRunner {
         for (Entry<String, Future<?>> future : futures.entrySet()) {
             if (future.getKey().equals(jobCode)) {
                 if (!future.getValue().isDone()) {
+                    JsonObject stoplog = Json.createObjectBuilder()
+                            .add("state", "stopped")
+                            .add("stateMsg", "Job execution was stopped.").build();
+                    try {
+                        saveResultLog(smartdataurl, collection, storage, job_id, stoplog, false, false);
+                    } catch (JobRunnerException ex) {
+                        result.add("error", "Could not save stop in log: " + JSONFormatter.escapeForJson(ex.getLocalizedMessage()));
+                    }
                     future.getValue().cancel(true);
                 }
                 futures.remove(future.getKey());
