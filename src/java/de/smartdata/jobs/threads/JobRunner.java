@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,6 +39,7 @@ public class JobRunner {
     private ScheduledExecutorService priorityExecutor;
 
     private Map<String, Future<?>> futures = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<String> executingJobs = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private boolean stopped = false;
 
     // Singleton instance
@@ -586,10 +588,12 @@ public class JobRunner {
             JsonObjectBuilder job = Json.createObjectBuilder();
 
             // Get actual state
-            if (future.getValue().isDone()) {
+            if (executingJobs.contains(future.getKey())) {
+                job.add("Job >" + future.getKey() + "<", "running");
+            } else if (future.getValue().isDone()) {
                 job.add("Job >" + future.getKey() + "<", "stopped");
             } else {
-                job.add("Job >" + future.getKey() + "<", "running");
+                job.add("Job >" + future.getKey() + "<", "waiting");
             }
 
             // Get last activity log
@@ -694,6 +698,8 @@ public class JobRunner {
     private void runJobAsync(Action jobsaction, String smartdataurl, String collection, String storage, JsonObject job, long jobid, LocalDateTime stop, JsonObject params) {
         Logger.startProcess(jobid + " (" + job.getString("name") + "):" + Instant.now().toString());
         Logger.log("Now running runnableTask for job >" + jobid + "<");
+        String jobCode = this.getJobCode(smartdataurl, collection, storage, jobid);
+        executingJobs.add(jobCode);
 
         try {
             if (stopped) {
@@ -737,6 +743,7 @@ public class JobRunner {
             Logger.log("Error occured while executing job >" + job.getInt("id") + "<: " + e.getLocalizedMessage());
             e.printStackTrace();
         } finally {
+            executingJobs.remove(jobCode);
             Logger.endProcess();
         }
     }
