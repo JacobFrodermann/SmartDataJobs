@@ -568,7 +568,7 @@ public class JobRunner {
     }
 
     /**
-     * Lists the states of all currently registred jobs
+     * Lists the states of all jobs
      *
      * @param smartdataurl URL to the SmartData Instance that contains job
      * informations
@@ -579,33 +579,35 @@ public class JobRunner {
     public JsonArray getJobStates(String smartdataurl, String collection, String storage) {
         JsonArrayBuilder jab = Json.createArrayBuilder();
         SmartDataAccessor acc = new SmartDataAccessor(smartdataurl);
-        String jobCodePrefix = smartdataurl + collection + storage;
+        JsonArray jobs;
+        try {
+            jobs = acc.fetchData(storage, collection, "id", null, null, null, null, null, null, Json.createObjectBuilder());
+        } catch (SmartDataAccessorException ex) {
+            jab.add(Json.createObjectBuilder().add("error", "Could not fetch jobs: " + JSONFormatter.escapeForJson(ex.getLocalizedMessage())));
+            return jab.build();
+        }
 
-        for (Entry<String, Future<?>> future : futures.entrySet()) {
-            if (!future.getKey().startsWith(jobCodePrefix)) {
-                continue;
-            }
+        for (JsonObject curJob : jobs.getValuesAs(JsonObject.class)) {
             JsonObjectBuilder job = Json.createObjectBuilder();
+            long jobid = curJob.getJsonNumber("id").longValue();
+            job.add("id", jobid);
 
             // Get actual state
-            if (executingJobs.contains(future.getKey())) {
-                job.add("Job >" + future.getKey() + "<", "running");
-            } else if (future.getValue().isDone()) {
-                job.add("Job >" + future.getKey() + "<", "stopped");
+            String jobCode = this.getJobCode(smartdataurl, collection, storage, jobid);
+            Future<?> future = futures.get(jobCode);
+            if (executingJobs.contains(jobCode)) {
+                job.add("state", "running");
+            } else if (future == null || future.isDone()) {
+                job.add("state", "stopped");
             } else {
-                job.add("Job >" + future.getKey() + "<", "waiting");
+                job.add("state", "waiting");
             }
 
             // Get last activity log
             try {
                 JsonObjectBuilder result = Json.createObjectBuilder();
-                String jobid = future.getKey().substring(jobCodePrefix.length());
                 JsonArray data = acc.fetchData(storage, collection + "_log", null, "datajob_id,eq," + jobid, "ts", null, null, "ts,DESC", 1L, result);
-                if (data.isEmpty()) {
-                    job.add("state", "There was no previous execution");
-                } else {
-                    job.add("lastlog", data);
-                }
+                job.add("lastlog", data);
             } catch (SmartDataAccessorException ex) {
                 job.add("error", "Could not fetch last activity: " + JSONFormatter.escapeForJson(ex.getLocalizedMessage()));
             }

@@ -232,6 +232,40 @@ public class JobExecutionResource {
     }
 
     @GET
+    @Path("/states")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "states",
+            description = "Lists the state and last log of all jobs.")
+    @APIResponse(
+            responseCode = "200",
+            description = "Job states",
+            content = @Content(
+                    mediaType = "application/json",
+                    example = "{\"jobs\" : [{\"id\" :  1, \"state\" : \"waiting\", \"lastlog\" : []}]}"
+            ))
+    public Response states(
+            @Parameter(description = "URL to smartdata instance") @QueryParam("smartdataurl") String smartdataurl,
+            @Parameter(description = "Collection name where tasks are defined") @QueryParam("collection") String collection,
+            @Parameter(description = "Storage name where tasks are defined") @QueryParam("storage") String storage) {
+        ResponseObjectBuilder rob = new ResponseObjectBuilder();
+        if (smartdataurl == null) {
+            smartdataurl = "http://localhost:8080/SmartData";
+        }
+        if (smartdataurl.startsWith("/")) {
+            smartdataurl = "http://localhost:8080" + smartdataurl;
+        }
+        if (collection == null) {
+            collection = "datajobs";
+        }
+        if (storage == null) {
+            storage = "public";
+        }
+        rob.add("jobs", jobrunner.getJobStates(smartdataurl, collection, storage));
+        rob.setStatus(Response.Status.OK);
+        return rob.toResponse();
+    }
+
+    @GET
     @Path("/stopAll")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "stopAll", description = "Stops all running jobs.")
