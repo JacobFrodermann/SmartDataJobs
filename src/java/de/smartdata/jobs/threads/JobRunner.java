@@ -577,8 +577,12 @@ public class JobRunner {
     public JsonArray getJobStates(String smartdataurl, String collection, String storage) {
         JsonArrayBuilder jab = Json.createArrayBuilder();
         SmartDataAccessor acc = new SmartDataAccessor(smartdataurl);
+        String jobCodePrefix = smartdataurl + collection + storage;
 
         for (Entry<String, Future<?>> future : futures.entrySet()) {
+            if (!future.getKey().startsWith(jobCodePrefix)) {
+                continue;
+            }
             JsonObjectBuilder job = Json.createObjectBuilder();
 
             // Get actual state
@@ -591,7 +595,8 @@ public class JobRunner {
             // Get last activity log
             try {
                 JsonObjectBuilder result = Json.createObjectBuilder();
-                JsonArray data = acc.fetchData(storage, collection + "_log", null, null, "ts", null, null, "ts,DESC", 1L, result);
+                String jobid = future.getKey().substring(jobCodePrefix.length());
+                JsonArray data = acc.fetchData(storage, collection + "_log", null, "datajob_id,eq," + jobid, "ts", null, null, "ts,DESC", 1L, result);
                 if (data.isEmpty()) {
                     job.add("state", "There was no previous execution");
                 } else {
