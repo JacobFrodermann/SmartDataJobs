@@ -40,7 +40,6 @@ public class JobRunner {
 
     private Map<String, Future<?>> futures = new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> executingJobs = java.util.concurrent.ConcurrentHashMap.newKeySet();
-    private final Set<String> stoppedWhileExecuting = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private boolean stopped = false;
 
     // Singleton instance
@@ -528,9 +527,6 @@ public class JobRunner {
                     } catch (JobRunnerException ex) {
                         result.add("error", "Could not save stop in log: " + JSONFormatter.escapeForJson(ex.getLocalizedMessage()));
                     }
-                    if (executingJobs.contains(jobCode)) {
-                        stoppedWhileExecuting.add(jobCode);
-                    }
                     future.getValue().cancel(true);
                 }
                 futures.remove(future.getKey());
@@ -746,10 +742,6 @@ public class JobRunner {
                 }
             });
         } catch (Exception e) {
-            if (stoppedWhileExecuting.contains(jobCode)) {
-                Logger.log("Job >" + jobid + "< was aborted by stop: " + e.getLocalizedMessage());
-                return;
-            }
             JsonObjectBuilder result = Json.createObjectBuilder();
             result.add("state", "error");
             result.add("error", e.getClass().getSimpleName() + " occured: " + JSONFormatter.escapeForJson(e.getLocalizedMessage()));
@@ -762,7 +754,6 @@ public class JobRunner {
             e.printStackTrace();
         } finally {
             executingJobs.remove(jobCode);
-            stoppedWhileExecuting.remove(jobCode);
             Logger.endProcess();
         }
     }
