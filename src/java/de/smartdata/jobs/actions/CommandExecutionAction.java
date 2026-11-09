@@ -156,6 +156,9 @@ public class CommandExecutionAction extends Action {
      * @return String with escaped characters
      */
     private String escapeString(String inputString) {
+        if (inputString == null) {
+            return "";
+        }
         String escapedString = inputString
                 .replace("\\", "\\\\") // Backslashes escapen
                 .replace("\n", "\\n") // Zeilenumbrüche escapen
